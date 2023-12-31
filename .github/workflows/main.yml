@@ -1,4 +1,4 @@
-name: Pathecho CI
+name: Dedup CI
 
 on:
   push:
@@ -27,8 +27,8 @@ jobs:
     - name: Checkout sources
       uses: actions/checkout@v3
  
-    - name: Build pathecho container image locally
-      run: docker build -t email4tong/pathecho:${{ env.IMAGE_TAG }} .
+    - name: Build dedup container image locally
+      run: docker build -t email4tong/dedup:${{ env.IMAGE_TAG }} .
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v2
@@ -45,12 +45,13 @@ jobs:
     - name: Build and push images
       run: |
         docker buildx build --push \
-          --tag email4tong/pathecho:${{env.IMAGE_TAG}} \
+          --tag email4tong/dedup:${{env.IMAGE_TAG}} \
           --platform linux/amd64,linux/arm64 .
 
     - name: Build and push images with latest tag
       run: |
         docker buildx build --push \
-          --tag email4tong/pathecho:latest \
+          --tag email4tong/dedup:latest \
           --platform linux/amd64,linux/arm64 .
+
     
