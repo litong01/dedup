@@ -1,4 +1,4 @@
-module github.com/pathecho
+module github.com/dedup
 
 require github.com/gorilla/mux v1.8.0
 
