@@ -24,6 +24,9 @@ func main() {
 	})
 
 	rootdir := os.Getenv("ROOTDIR")
+	if rootdir == "" {
+		rootdir = "/tmp/dedup"
+	}
 
 	r.PathPrefix("/start").Methods("GET").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		dryrun := r.URL.Query().Get("dryrun")

@@ -69,22 +69,33 @@ func StopProcess() error {
 
 func processOneFile(path string, info os.FileInfo, err error, dryrun bool) error {
 	if err != nil {
-		return err
+		if errors.Is(err, os.ErrNotExist) || errors.Is(err, os.ErrPermission) {
+			return nil
+		} else {
+			logger.Error("Error found", "The error", err)
+			return err
+		}
 	}
-	// skip the directory
-	if info.IsDir() {
+
+	// skip the directory, symbolic link, or socket
+	if info.IsDir() || info.Mode()&os.ModeSymlink != 0 || info.Mode()&os.ModeSocket != 0 || info.Mode()&os.ModeType != 0 {
 		state.Processed++
 		return nil
 	}
-	thefile, err := os.Open(path)
-	if err != nil {
+
+	thefile, errhere := os.Open(path)
+	if errhere != nil {
+		logger.Error("Processing file error", "file name", path)
+		logger.Error(errhere.Error())
 		return err
 	}
 
 	// use the sha256 hash as writer to create hash of a file
 	thehash := sha256.New()
-	if _, err = io.Copy(thehash, thefile); err != nil {
-		return err
+	if _, errhere = io.Copy(thehash, thefile); errhere != nil {
+		logger.Error("Getting hash error", "file name", path)
+		logger.Error(errhere.Error())
+		return errhere
 	}
 	// no longer need the file, close it
 	thefile.Close()
