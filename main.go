@@ -61,6 +61,9 @@ func main() {
 
 	go func() {
 		Logger.Info(rootdir)
+		if rootdir == "" {
+			rootdir = "/tmp/dedup"
+		}
 		utils.Dedup(rootdir)
 	}()
 
