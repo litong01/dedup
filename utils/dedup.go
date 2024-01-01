@@ -2,19 +2,30 @@ package utils
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"hash"
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
 
+type dedupState struct {
+	InProcess   bool   `json:"inProcess"`
+	Duplicates  int    `json:"duplicates"`
+	Processed   int    `json:"processed"`
+	Unique      int    `json:"unique"`
+	CurrentTime string `json:"currentTime"`
+	LastError   string `json:"lastError"`
+}
+
 var (
-	filehash      map[hash.Hash]struct{}
-	fileprocessed int
-	dupfound      int
-	stop          chan bool
-	inProcess     bool
+	filehash map[hash.Hash]struct{}
+	stop     chan bool
+
+	state dedupState
 
 	errStop         = errors.New("stop command received")
 	errInProcess    = errors.New("already in process")
@@ -23,18 +34,25 @@ var (
 
 func init() {
 	filehash = make(map[hash.Hash]struct{})
-	fileprocessed = 0
-	dupfound = 0
 	stop = make(chan bool)
-	inProcess = false
+
+	state.Duplicates = 0
+	state.Processed = 0
+	state.InProcess = false
+	state.Unique = 0
+	state.LastError = ""
 }
 
-func GetStates() (int, int) {
-	return fileprocessed, len(filehash)
+// GetStates return the dedup state in json format
+func GetStates() string {
+	state.Unique = len(filehash)
+	state.CurrentTime = GetCurrentTime()
+	data, _ := json.Marshal(state)
+	return string(data)
 }
 
 func StartProcess(rootdir string, dryrun bool) error {
-	if inProcess {
+	if state.InProcess {
 		return errInProcess
 	}
 	go dedup(rootdir, dryrun)
@@ -42,7 +60,7 @@ func StartProcess(rootdir string, dryrun bool) error {
 }
 
 func StopProcess() error {
-	if !inProcess {
+	if !state.InProcess {
 		return errNotInProcess
 	}
 	stop <- true
@@ -55,7 +73,7 @@ func processOneFile(path string, info os.FileInfo, err error, dryrun bool) error
 	}
 	// skip the directory
 	if info.IsDir() {
-		fileprocessed++
+		state.Processed++
 		return nil
 	}
 	thefile, err := os.Open(path)
@@ -75,7 +93,7 @@ func processOneFile(path string, info os.FileInfo, err error, dryrun bool) error
 	if _, ok := filehash[thehash]; ok {
 		// found duplicate, should remove the file.
 		logger.Info("Duplicate instance", "name", path)
-		dupfound++
+		state.Duplicates++
 		if !dryrun { // only do the real remove when it is not dryrun
 			os.Remove(path)
 		}
@@ -85,16 +103,17 @@ func processOneFile(path string, info os.FileInfo, err error, dryrun bool) error
 		filehash[thehash] = struct{}{}
 	}
 	// finished one file processing, increase the counter
-	fileprocessed++
+	state.Processed++
 	return nil
 }
 
 func dedup(rootdir string, dryrun bool) error {
-	inProcess = true
+	state.InProcess = true
+	state.LastError = ""
 	err := filepath.Walk(rootdir, func(path string, info os.FileInfo, err error) error {
 		select {
 		case <-stop: // received the stop signal
-			inProcess = false
+			state.InProcess = false
 			return errStop
 		default: // keep on going
 			return processOneFile(path, info, err, dryrun)
@@ -102,6 +121,20 @@ func dedup(rootdir string, dryrun bool) error {
 	})
 
 	// reach the end, no longer in process
-	inProcess = false
+	state.InProcess = false
+
+	// save the error message
+	if err != nil {
+		state.LastError = err.Error()
+	} else {
+		state.LastError = ""
+	}
 	return err
+}
+
+func GetCurrentTime() string {
+	t := time.Now()
+	return fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d.%07dZ",
+		t.Year(), t.Month(), t.Day(),
+		t.Hour(), t.Minute(), t.Second(), t.Nanosecond())
 }
