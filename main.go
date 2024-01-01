@@ -18,7 +18,7 @@ func main() {
 		formatted := utils.GetCurrentTime()
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		content := `{"status":"OK","time":"` + formatted + "\"}"
+		content := `{"status":"OK","time":"` + formatted + `"}`
 		w.Write([]byte(content))
 		logger.Info("GET", "path", r.RequestURI)
 	})
@@ -36,10 +36,10 @@ func main() {
 		var content string
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
-			content = `{"status":"OK","time":"` + formatted + "\"}"
+			content = `{"status":"OK","time":"` + formatted + `"}`
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
-			content = `{"status":"ERROR","time":"` + formatted + `"error:"` + err.Error() + "\"}"
+			content = `{"status":"ERROR","time":"` + formatted + `", "error":"` + err.Error() + `"}`
 		}
 		w.Header().Set("Content-Type", "application/json")
 
@@ -53,10 +53,10 @@ func main() {
 		var content string
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
-			content = `{"status":"OK","time":"` + formatted + "\"}"
+			content = `{"status":"OK","time":"` + formatted + `"}`
 		} else {
 			w.WriteHeader(http.StatusBadRequest)
-			content = `{"status":"ERROR","time":"` + formatted + `"error:"` + err.Error() + "\"}"
+			content = `{"status":"ERROR","time":"` + formatted + `,"error:"` + err.Error() + `"}`
 		}
 		w.Header().Set("Content-Type", "application/json")
 
