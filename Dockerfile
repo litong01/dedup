@@ -5,7 +5,7 @@ RUN cd /go/src/github.com/dedup && \
     go build -o dedup
 
 FROM alpine:3.17.1
-WORKDIR /etc/dedup
+WORKDIR /tmp/dedup
 COPY --from=BUILDER /go/src/github.com/dedup/dedup /usr/local/bin
 
 CMD ["/usr/local/bin/dedup"]
