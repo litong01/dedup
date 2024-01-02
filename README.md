@@ -24,3 +24,8 @@ To stop the process:
 ```
 curl http://localhost:9090/stop
 ```
+To see the progress:
+```
+curl http://localhost:9090/
+```
+
