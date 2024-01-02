@@ -12,7 +12,7 @@ The mounted directory dir1 and dir2 will be processed altogether, you may
 mount many directories to the container under /tmp/dedup directory to process
 more files
 
-To start drurun:
+To start dryrun:
 ```
 curl http://localhost:9090/start?dryrun=true 
 ```
