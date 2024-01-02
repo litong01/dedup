@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash"
 	"io"
 	"os"
 	"path/filepath"
@@ -22,7 +21,7 @@ type dedupState struct {
 }
 
 var (
-	filehash map[hash.Hash]struct{}
+	filehash map[string]struct{}
 	stop     chan bool
 
 	state dedupState
@@ -33,7 +32,7 @@ var (
 )
 
 func init() {
-	filehash = make(map[hash.Hash]struct{})
+	filehash = make(map[string]struct{})
 	stop = make(chan bool)
 
 	state.Duplicates = 0
@@ -100,8 +99,11 @@ func processOneFile(path string, info os.FileInfo, err error, dryrun bool) error
 	// no longer need the file, close it
 	thefile.Close()
 
+	// convert the hash.Hash to hash string
+	hashString := fmt.Sprintf("%x", thehash.Sum(nil))
+
 	// Now if ok true, that means we find a duplicate.
-	if _, ok := filehash[thehash]; ok {
+	if _, ok := filehash[hashString]; ok {
 		// found duplicate, should remove the file.
 		logger.Info("Duplicate instance", "name", path)
 		state.Duplicates++
@@ -111,7 +113,7 @@ func processOneFile(path string, info os.FileInfo, err error, dryrun bool) error
 	} else {
 		// not exist in hash, place it in.
 		logger.Info("First instance", "name", path)
-		filehash[thehash] = struct{}{}
+		filehash[hashString] = struct{}{}
 	}
 	// finished one file processing, increase the counter
 	state.Processed++
