@@ -12,7 +12,7 @@ import (
 )
 
 type dedupState struct {
-	InProcess   bool   `json:"inProcess"`
+	Running     bool   `json:"running"`
 	Duplicates  int    `json:"duplicates"`
 	Processed   int    `json:"processed"`
 	Unique      int    `json:"unique"`
@@ -26,9 +26,9 @@ var (
 
 	state dedupState
 
-	errStop         = errors.New("stop command received")
-	errInProcess    = errors.New("already in process")
-	errNotInProcess = errors.New("not in process")
+	errStop       = errors.New("stop command received")
+	errRunning    = errors.New("dedup is already running")
+	errNotRunning = errors.New("dedup is not running")
 )
 
 func init() {
@@ -37,7 +37,7 @@ func init() {
 
 	state.Duplicates = 0
 	state.Processed = 0
-	state.InProcess = false
+	state.Running = false
 	state.Unique = 0
 	state.LastError = ""
 }
@@ -51,16 +51,16 @@ func GetStates() string {
 }
 
 func StartProcess(rootdir string, dryrun bool) error {
-	if state.InProcess {
-		return errInProcess
+	if state.Running {
+		return errRunning
 	}
 	go dedup(rootdir, dryrun)
 	return nil
 }
 
 func StopProcess() error {
-	if !state.InProcess {
-		return errNotInProcess
+	if !state.Running {
+		return errNotRunning
 	}
 	stop <- true
 	return nil
@@ -121,12 +121,12 @@ func processOneFile(path string, info os.FileInfo, err error, dryrun bool) error
 }
 
 func dedup(rootdir string, dryrun bool) error {
-	state.InProcess = true
+	state.Running = true
 	state.LastError = ""
 	err := filepath.Walk(rootdir, func(path string, info os.FileInfo, err error) error {
 		select {
 		case <-stop: // received the stop signal
-			state.InProcess = false
+			state.Running = false
 			return errStop
 		default: // keep on going
 			return processOneFile(path, info, err, dryrun)
@@ -134,7 +134,7 @@ func dedup(rootdir string, dryrun bool) error {
 	})
 
 	// reach the end, no longer in process
-	state.InProcess = false
+	state.Running = false
 
 	// save the error message
 	if err != nil {
