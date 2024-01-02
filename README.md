@@ -20,4 +20,3 @@ curl http://localhost:9090/start?drurun=false
 
 To stop the process
 curl http://localhost:9090/stop
-
